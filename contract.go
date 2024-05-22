@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -20,11 +20,11 @@ type Asset struct {
 
 // Struct For Storing Transaction Metadata
 type TransactionReceipt struct {
-	Transaction_Creator   string               `json:trx_Creator`
-	Transaction_Timestamp *timestamp.Timestamp `json: trx_timestamp`
-	Transaction_Id        string               `json: trx_id`
-	Client_Id             string               `json: client_id`
-	Channel_Id            string               `json:channel_id`
+	Transaction_Creator   string    `json:trx_Creator`
+	Transaction_Timestamp time.Time `json: trx_timestamp`
+	Transaction_Id        string    `json: trx_id`
+	Client_Id             string    `json: client_id`
+	Channel_Id            string    `json:channel_id`
 }
 
 func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInterface) error {
@@ -124,6 +124,7 @@ func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInt
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
 	}
+	utc_time := time.Unix(trx_timestamp.Seconds, 0)
 
 	trx_id := ctx.GetStub().GetTxID()
 
@@ -136,7 +137,7 @@ func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInt
 
 	transaction_receipt := TransactionReceipt{
 		Transaction_Creator:   trx_creator,
-		Transaction_Timestamp: trx_timestamp,
+		Transaction_Timestamp: utc_time,
 		Transaction_Id:        trx_id,
 		Client_Id:             client_id,
 		Channel_Id:            channel_id,
@@ -233,6 +234,7 @@ func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInt
 	}
 
 	trx_timestamp, err := ctx.GetStub().GetTxTimestamp()
+	utc_time := time.Unix(trx_timestamp.Seconds, 0)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
@@ -249,7 +251,7 @@ func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInt
 
 	transaction_receipt := TransactionReceipt{
 		Transaction_Creator:   trx_creator,
-		Transaction_Timestamp: trx_timestamp,
+		Transaction_Timestamp: utc_time,
 		Transaction_Id:        trx_id,
 		Client_Id:             client_id,
 		Channel_Id:            channel_id,
