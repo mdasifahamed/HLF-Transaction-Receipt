@@ -27,7 +27,7 @@ type TransactionReceipt struct {
 	Channel_Id            string
 }
 
-func (contract *TestContract) InitAsset(ctx contractapi.TransactionContextInterface) error {
+func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInterface) error {
 
 	/*
 		InitAsset() Method Is Write According To The Chaincode
@@ -80,6 +80,27 @@ func (contract *TestContract) InitAsset(ctx contractapi.TransactionContextInterf
 	}
 
 	return nil
+}
+
+func (contract *TestContract) Has_Asset(ctx contractapi.TransactionContextInterface, _id string) (bool, error) {
+	/*
+		Has_Asset is a helper function Which checks if a asset exists or not in the ledger
+		@params _id is the id of the asset which is being checked for its existence
+
+		returns: true and nil if the asset exists else false if the asset does not exists
+	*/
+	var found bool
+	asset, err := ctx.GetStub().GetState(_id)
+
+	if err != nil {
+		return found, fmt.Errorf("Failed To Read From The Ledger")
+	}
+
+	if asset != nil {
+		found = true
+	}
+
+	return found, nil
 }
 
 func main() {
