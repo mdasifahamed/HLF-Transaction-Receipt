@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
+
+	trx "contract/transactionReceipt"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -16,15 +17,6 @@ type TestContract struct {
 type Asset struct {
 	Id    string `json:Id`
 	Owner string `json:Owner`
-}
-
-// Struct For Storing Transaction Metadata
-type TransactionReceipt struct {
-	Transaction_Creator   string    `json:trx_Creator`
-	Transaction_Timestamp time.Time `json: trx_timestamp`
-	Transaction_Id        string    `json: trx_id`
-	Client_Id             string    `json: client_id`
-	Channel_Id            string    `json:channel_id`
 }
 
 func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInterface) error {
@@ -82,7 +74,7 @@ func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInter
 	return nil
 }
 
-func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*TransactionReceipt, error) {
+func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*trx.TransactionReceipt, error) {
 	/* 	Create Asset Chaincode Method To Create New Asset
 	@params _id is the id of the asset
 	@params _owner owner of the asset
@@ -113,59 +105,14 @@ func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInt
 		return nil, fmt.Errorf("Failed to put asset to ledger : %v", err)
 	}
 
-	trx_creator, err := ctx.GetClientIdentity().GetID()
+	trx_receipt, err := trx.Get_Transaction_Receipt(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get transaction creator : %v", err)
+		return nil, fmt.Errorf("Failed to get transaction receipt: %v", err)
 	}
 
-	trx_timestamp, err := ctx.GetStub().GetTxTimestamp()
+	return trx_receipt, nil
 
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
-	}
-	utc_time := time.Unix(trx_timestamp.Seconds, 0)
-
-	trx_id := ctx.GetStub().GetTxID()
-
-	client_id, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get Client : %v", err)
-	}
-
-	channel_id := ctx.GetStub().GetChannelID()
-
-	transaction_receipt := TransactionReceipt{
-		Transaction_Creator:   trx_creator,
-		Transaction_Timestamp: utc_time,
-		Transaction_Id:        trx_id,
-		Client_Id:             client_id,
-		Channel_Id:            channel_id,
-	}
-
-	return &transaction_receipt, nil
-
-}
-
-func (contract *TestContract) Has_Asset(ctx contractapi.TransactionContextInterface, _id string) (bool, error) {
-	/*
-		Has_Asset is a helper function Which checks if a asset exists or not in the ledger
-		@params _id is the id of the asset which is being checked for its existence
-
-		returns: true and nil if the asset exists else false if the asset does not exists
-	*/
-	var found bool
-	asset, err := ctx.GetStub().GetState(_id)
-
-	if err != nil {
-		return found, fmt.Errorf("Failed To Read From The Ledger")
-	}
-
-	if asset != nil {
-		found = true
-	}
-
-	return found, nil
 }
 
 func (contract *TestContract) Read_Asset(ctx contractapi.TransactionContextInterface, _id string) (*Asset, error) {
@@ -193,7 +140,7 @@ func (contract *TestContract) Read_Asset(ctx contractapi.TransactionContextInter
 	return &asset, nil
 }
 
-func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*TransactionReceipt, error) {
+func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*trx.TransactionReceipt, error) {
 	/*
 		Update_Asset() function updates a specific asset's value we want to change for now it the only owner we to change
 		@params _id is the id of the asset to be updated
@@ -214,6 +161,7 @@ func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInt
 	if err != nil {
 		return nil, fmt.Errorf("Failed to retrive asset from the ledger ")
 	}
+
 	asset.Owner = _owner
 
 	json_asset, err := json.Marshal(asset)
@@ -227,40 +175,36 @@ func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInt
 		return nil, fmt.Errorf("Failed to add asset to the ledger")
 	}
 
-	trx_creator, err := ctx.GetClientIdentity().GetID()
+	trx_receipt, err := trx.Get_Transaction_Receipt(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get transaction creator : %v", err)
+		return nil, fmt.Errorf("Failed to get transaction receipt: %v", err)
 	}
 
-	trx_timestamp, err := ctx.GetStub().GetTxTimestamp()
-	utc_time := time.Unix(trx_timestamp.Seconds, 0)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
-	}
-
-	trx_id := ctx.GetStub().GetTxID()
-
-	client_id, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get Client : %v", err)
-	}
-
-	channel_id := ctx.GetStub().GetChannelID()
-
-	transaction_receipt := TransactionReceipt{
-		Transaction_Creator:   trx_creator,
-		Transaction_Timestamp: utc_time,
-		Transaction_Id:        trx_id,
-		Client_Id:             client_id,
-		Channel_Id:            channel_id,
-	}
-
-	return &transaction_receipt, nil
+	return trx_receipt, nil
 
 }
 
+func (contract *TestContract) Has_Asset(ctx contractapi.TransactionContextInterface, _id string) (bool, error) {
+	/*
+		Has_Asset is a helper function Which checks if a asset exists or not in the ledger
+		@params _id is the id of the asset which is being checked for its existence
+
+		returns: true and nil if the asset exists else false if the asset does not exists
+	*/
+	var found bool
+	asset, err := ctx.GetStub().GetState(_id)
+
+	if err != nil {
+		return found, fmt.Errorf("Failed To Read From The Ledger")
+	}
+
+	if asset != nil {
+		found = true
+	}
+
+	return found, nil
+}
 func main() {
 
 	test_chaincode, err := contractapi.NewChaincode(&TestContract{})
