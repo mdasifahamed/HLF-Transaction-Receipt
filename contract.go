@@ -192,6 +192,73 @@ func (contract *TestContract) Read_Asset(ctx contractapi.TransactionContextInter
 	return &asset, nil
 }
 
+func (contract *TestContract) Update_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*TransactionReceipt, error) {
+	/*
+		Update_Asset() function updates a specific asset's value we want to change for now it the only owner we to change
+		@params _id is the id of the asset to be updated
+		@params _owner is the owner name which will be updated
+		returns : Transactionreceipt or error
+
+		Note: Returning TransactionReceipt is implemented here becasue it might require who and when the asset has been updated
+	*/
+
+	is_exists, err := contract.Has_Asset(ctx, _id)
+
+	if err != nil || is_exists == false { // if the assets does not exist.
+		return nil, fmt.Errorf("Asset not found the id : %v", _id)
+	}
+
+	asset, err := contract.Read_Asset(ctx, _id)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to retrive asset from the ledger ")
+	}
+	asset.Owner = _owner
+
+	json_asset, err := json.Marshal(asset)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to marshal the asset")
+	}
+
+	err = ctx.GetStub().PutState(asset.Id, json_asset)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to add asset to the ledger")
+	}
+
+	trx_creator, err := ctx.GetClientIdentity().GetID()
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get transaction creator : %v", err)
+	}
+
+	trx_timestamp, err := ctx.GetStub().GetTxTimestamp()
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
+	}
+
+	trx_id := ctx.GetStub().GetTxID()
+
+	client_id, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get Client : %v", err)
+	}
+
+	channel_id := ctx.GetStub().GetChannelID()
+
+	transaction_receipt := TransactionReceipt{
+		Transaction_Creator:   trx_creator,
+		Transaction_Timestamp: trx_timestamp,
+		Transaction_Id:        trx_id,
+		Client_Id:             client_id,
+		Channel_Id:            channel_id,
+	}
+
+	return &transaction_receipt, nil
+
+}
+
 func main() {
 
 	test_chaincode, err := contractapi.NewChaincode(&TestContract{})
