@@ -167,6 +167,31 @@ func (contract *TestContract) Has_Asset(ctx contractapi.TransactionContextInterf
 	return found, nil
 }
 
+func (contract *TestContract) Read_Asset(ctx contractapi.TransactionContextInterface, _id string) (*Asset, error) {
+	/*
+		Read_Asset() function returns asset if it exists in the ledger
+
+		@params _id is the id of the asset to read
+
+		returns : asset or error message
+	*/
+
+	json_asset, err := ctx.GetStub().GetState(_id)
+
+	if err != nil {
+		return nil, fmt.Errorf("Asset not found the id : %v", _id)
+	}
+
+	var asset Asset
+
+	err = json.Unmarshal(json_asset, &asset)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal asset from json ")
+	}
+
+	return &asset, nil
+}
+
 func main() {
 
 	test_chaincode, err := contractapi.NewChaincode(&TestContract{})
