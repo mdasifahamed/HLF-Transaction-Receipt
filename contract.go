@@ -20,11 +20,11 @@ type Asset struct {
 
 // Struct For Storing Transaction Metadata
 type TransactionReceipt struct {
-	Transaction_Creator   string
-	Transaction_Timestamp *timestamp.Timestamp
-	Transaction_Id        string
-	Client_Id             string
-	Channel_Id            string
+	Transaction_Creator   string               `json:trx_Creator`
+	Transaction_Timestamp *timestamp.Timestamp `json: trx_timestamp`
+	Transaction_Id        string               `json: trx_id`
+	Client_Id             string               `json: client_id`
+	Channel_Id            string               `json:channel_id`
 }
 
 func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInterface) error {
@@ -80,6 +80,70 @@ func (contract *TestContract) Init_Asset(ctx contractapi.TransactionContextInter
 	}
 
 	return nil
+}
+
+func (contract *TestContract) Create_Asset(ctx contractapi.TransactionContextInterface, _id string, _owner string) (*TransactionReceipt, error) {
+	/* 	Create Asset Chaincode Method To Create New Asset
+	@params _id is the id of the asset
+	@params _owner owner of the asset
+	return: on successfull it will return the transationreceipt object which will contain all information for this transaction
+	*/
+	is_exists, err := contract.Has_Asset(ctx, _id)
+
+	if err != nil || is_exists == true {
+		return nil, fmt.Errorf("Asset Already Exists With The Id : %v", _id)
+	}
+
+	asset := Asset{
+		Id:    _id,
+		Owner: _owner,
+	}
+
+	// Json Parsing
+
+	json_asset, err := json.Marshal(asset)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parsing json error : %v", err)
+	}
+
+	err = ctx.GetStub().PutState(asset.Id, json_asset)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to put asset to ledger : %v", err)
+	}
+
+	trx_creator, err := ctx.GetClientIdentity().GetID()
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get transaction creator : %v", err)
+	}
+
+	trx_timestamp, err := ctx.GetStub().GetTxTimestamp()
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get transaction timestamp : %v", err)
+	}
+
+	trx_id := ctx.GetStub().GetTxID()
+
+	client_id, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get Client : %v", err)
+	}
+
+	channel_id := ctx.GetStub().GetChannelID()
+
+	transaction_receipt := TransactionReceipt{
+		Transaction_Creator:   trx_creator,
+		Transaction_Timestamp: trx_timestamp,
+		Transaction_Id:        trx_id,
+		Client_Id:             client_id,
+		Channel_Id:            channel_id,
+	}
+
+	return &transaction_receipt, nil
+
 }
 
 func (contract *TestContract) Has_Asset(ctx contractapi.TransactionContextInterface, _id string) (bool, error) {
